@@ -27,6 +27,8 @@ use std::sync::Arc;
 pub mod future;
 #[cfg(feature = "ping")]
 pub mod ping;
+#[cfg(feature = "threadpool")]
+pub mod threadpool;
 
 /// A source that can be registered into a [`Poller`].
 ///

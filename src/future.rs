@@ -1,12 +1,12 @@
 //! Poll a future using the `polling` loop.
 
 use std::future::Future;
-use std::sync::Arc;
 use std::pin::Pin;
-use std::task::{Poll, Context, Waker, Wake};
+use std::sync::Arc;
+use std::task::{Context, Poll, Wake, Waker};
 
-use crate::ping::{Ping, Notifier};
-use crate::{Source, Event, PollMode, Poller, Result};
+use crate::ping::{Notifier, Ping};
+use crate::{Event, PollMode, Poller, Result, Source};
 
 pin_project_lite::pin_project! {
     /// A wrapper around a future to be polled.
@@ -26,7 +26,10 @@ pin_project_lite::pin_project! {
 
 impl<F: Future + ?Sized> PollFuture<F> {
     /// Creates a new future to be polled.
-    pub fn new(future: F) -> Result<Self> where F: Sized {
+    pub fn new(future: F) -> Result<Self>
+    where
+        F: Sized,
+    {
         let ping = Ping::new()?;
         let waker = Waker::from(Arc::new(Notify(ping.notifier())));
         Ok(Self {
@@ -59,7 +62,10 @@ impl<F: Future + ?Sized> PollFuture<F> {
     }
 
     /// Poll this future to completion, but without pinning.
-    pub fn poll_unpin(&mut self) -> Poll<F::Output> where F: Unpin {
+    pub fn poll_unpin(&mut self) -> Poll<F::Output>
+    where
+        F: Unpin,
+    {
         Pin::new(self).poll()
     }
 }
