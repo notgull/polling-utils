@@ -7,6 +7,7 @@ edition = "2018"
 async-channel = { version = "1.8.0", optional = true }
 blocking = { version = "1.3.1", optional = true }
 cfg-if = { version = "1.0.0", optional = true }
+futures-io = { version = "0.3.28", optional = true }
 pin-project-lite = { version = "0.2.9", optional = true }
 polling = "2.8.0"
 
@@ -17,4 +18,4 @@ rustix = { version = "0.37.18", default-features = false, features = ["std"], op
 default = ["future", "ping", "threadpool"]
 future = ["pin-project-lite", "ping"]
 ping = ["cfg-if", "rustix"]
-threadpool = ["blocking", "future"]
+threadpool = ["blocking", "future", "futures-io"]

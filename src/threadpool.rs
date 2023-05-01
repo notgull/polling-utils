@@ -1,9 +1,16 @@
 //! Access to a thread pool.
 
 use crate::future::PollFuture;
+use crate::ping::{Notifier, Ping};
 use crate::{Event, PollMode, Poller, Result, Source};
 
-use blocking::Task;
+use blocking::{Unblock, Task};
+use futures_io::{AsyncRead, AsyncWrite};
+
+use std::future::Future;
+use std::io;
+use std::marker::PhantomData;
+use std::pin::Pin;
 use std::sync::Arc;
 use std::task::Poll;
 
@@ -47,3 +54,9 @@ impl<T: Send + 'static> Source for UnblockFn<T> {
         self.inner.handle_event(poller, event)
     }
 }
+
+/// Waits for data to be read from a reader in a threadpool.
+pub struct UnblockReader<R> {
+    reader: Unblock<R>,
+}
+
