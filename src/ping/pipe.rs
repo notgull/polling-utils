@@ -1,9 +1,9 @@
 //! A ping event source built on a pipe.
 
 use rustix::fd::OwnedFd;
-use rustix::io::{pipe, fcntl_getfd, fcntl_setfd, FdFlags, pipe_with, PipeFlags, write, read};
+use rustix::io::{fcntl_getfd, fcntl_setfd, pipe, pipe_with, read, write, FdFlags, PipeFlags};
 
-use crate::{Socket, PollMode, Event, Poller, Result, Source};
+use crate::{Event, PollMode, Poller, Result, Socket, Source};
 use std::sync::Arc;
 
 #[derive(Debug)]
@@ -21,20 +21,19 @@ pub(super) struct Notify(Arc<OwnedFd>);
 impl Ping {
     pub(super) fn new() -> Result<Self> {
         // Create a new pipe.
-        let (reader, writer) = pipe_with(PipeFlags::CLOEXEC)
-            .or_else(|_| {
-                // If we failed to atomically create a pipe with the `CLOEXEC` flag, we try to
-                // create a pipe without it and then set the flag manually.
-                let (reader, writer) = pipe()?;
+        let (reader, writer) = pipe_with(PipeFlags::CLOEXEC).or_else(|_| {
+            // If we failed to atomically create a pipe with the `CLOEXEC` flag, we try to
+            // create a pipe without it and then set the flag manually.
+            let (reader, writer) = pipe()?;
 
-                // Set the `CLOEXEC` flag on the writer end.
-                fcntl_setfd(&writer, fcntl_getfd(&writer)? | FdFlags::CLOEXEC)?;
-                
-                // Set the `CLOEXEC` flag on the reader end.
-                fcntl_setfd(&reader, fcntl_getfd(&reader)? | FdFlags::CLOEXEC)?;
+            // Set the `CLOEXEC` flag on the writer end.
+            fcntl_setfd(&writer, fcntl_getfd(&writer)? | FdFlags::CLOEXEC)?;
 
-                Result::Ok((reader, writer))
-            })?;
+            // Set the `CLOEXEC` flag on the reader end.
+            fcntl_setfd(&reader, fcntl_getfd(&reader)? | FdFlags::CLOEXEC)?;
+
+            Result::Ok((reader, writer))
+        })?;
 
         Ok(Self {
             reader: Socket::new(reader),
@@ -46,11 +45,21 @@ impl Ping {
         &self.writer
     }
 
-    pub(super) fn register(&mut self, poller: &Arc<Poller>, interest: Event, mode: PollMode) -> Result<()> {
+    pub(super) fn register(
+        &mut self,
+        poller: &Arc<Poller>,
+        interest: Event,
+        mode: PollMode,
+    ) -> Result<()> {
         self.reader.register(poller, interest, mode)
     }
 
-    pub(super) fn reregister(&mut self, poller: &Arc<Poller>, interest: Event, mode: PollMode) -> Result<()> {
+    pub(super) fn reregister(
+        &mut self,
+        poller: &Arc<Poller>,
+        interest: Event,
+        mode: PollMode,
+    ) -> Result<()> {
         self.reader.reregister(poller, interest, mode)
     }
 

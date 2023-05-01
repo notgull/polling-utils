@@ -1,9 +1,18 @@
 //! A "ping" event source that wakes up when the user requests it to.
 
-mod pipe;
-use pipe as sys;
+cfg_if::cfg_if! {
+    if #[cfg(target_os = "linux")] {
+        mod eventfd;
+        use eventfd as sys;
+    } else if #[cfg(unix)] {
+        mod pipe;
+        use pipe as sys;
+    } else {
+        compile_error!("The ping feature is only supported on Unix.");
+    }
+}
 
-use crate::{Source, Result, Poller, Event, PollMode};
+use crate::{Event, PollMode, Poller, Result, Source};
 use std::sync::Arc;
 
 /// A ping event source that wakes up when the user requests it to.
@@ -40,7 +49,7 @@ impl Source for Ping {
     fn register(&mut self, poller: &Arc<Poller>, interest: Event, mode: PollMode) -> Result<()> {
         self.source.register(poller, interest, mode)
     }
-    
+
     fn reregister(&mut self, poller: &Arc<Poller>, interest: Event, mode: PollMode) -> Result<()> {
         self.source.reregister(poller, interest, mode)
     }
