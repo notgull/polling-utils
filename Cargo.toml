@@ -1,0 +1,14 @@
+[package]
+name = "polling-utils"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+polling = "2.8.0"
+
+[target.'cfg(unix)'.dependencies]
+rustix = { version = "0.37.18", default-features = false, features = ["std"], optional = true }
+
+[features]
+default = ["ping"]
+ping = ["rustix"]
