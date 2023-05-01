@@ -23,6 +23,8 @@ pub use polling::{Event, PollMode, Poller};
 use std::io::Result;
 use std::sync::Arc;
 
+#[cfg(feature = "future")]
+pub mod future;
 #[cfg(feature = "ping")]
 pub mod ping;
 
