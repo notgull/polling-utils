@@ -31,6 +31,8 @@ pub mod future;
 pub mod ping;
 #[cfg(feature = "threadpool")]
 pub mod threadpool;
+#[cfg(feature = "timer")]
+pub mod timer;
 
 /// A source that can be registered into a [`Poller`].
 ///

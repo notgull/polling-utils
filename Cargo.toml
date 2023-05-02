@@ -15,8 +15,9 @@ polling = "2.8.0"
 rustix = { version = "0.37.18", default-features = false, features = ["std"], optional = true }
 
 [features]
-default = ["channel", "future", "ping", "threadpool"]
+default = ["channel", "future", "ping", "timer", "threadpool"]
 channel = ["async-channel", "future"]
 future = ["pin-project-lite", "ping"]
 ping = ["cfg-if", "rustix"]
 threadpool = ["blocking", "future", "futures-io"]
+timer = ["ping"]
