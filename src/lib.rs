@@ -14,7 +14,7 @@
 //! [`polling`]: https://docs.rs/polling
 //! [`smol`]: https://docs.rs/smol
 
-#![forbid(unsafe_code)]
+#![cfg_attr(not(windows), forbid(unsafe_code))]
 
 use polling::Source as PSource;
 #[doc(inline)]

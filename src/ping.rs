@@ -7,6 +7,9 @@ cfg_if::cfg_if! {
     } else if #[cfg(unix)] {
         mod pipe;
         use pipe as sys;
+    } else if #[cfg(windows)] {
+        mod iocp;
+        use iocp as sys;
     } else {
         compile_error!("The ping feature is only supported on Unix.");
     }
