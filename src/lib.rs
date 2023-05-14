@@ -57,27 +57,15 @@ pub trait Source {
 
 /// The typical socket source registed into the [`Poller`].
 #[derive(Debug)]
-pub struct Socket<T: ?Sized> {
-    /// The event that we are interested in.
-    interest: Option<Interest>,
-
+pub struct Socket<T> {
     /// The underlying socket.
     socket: T,
-}
-
-#[derive(Debug)]
-struct Interest {
-    event: Event,
-    mode: PollMode,
 }
 
 impl<T> Socket<T> {
     /// Creates a new socket source.
     pub fn new(socket: T) -> Self {
-        Self {
-            interest: None,
-            socket,
-        }
+        Self { socket }
     }
 
     /// Get a reference to the underlying socket.
@@ -101,27 +89,15 @@ where
     for<'a> &'a T: PSource,
 {
     fn register(&mut self, poller: &Arc<Poller>, interest: Event, mode: PollMode) -> Result<()> {
-        self.interest = Some(Interest {
-            event: interest,
-            mode,
-        });
         poller.add_with_mode(&self.socket, interest, mode)
     }
 
     fn reregister(&mut self, poller: &Arc<Poller>, interest: Event, mode: PollMode) -> Result<()> {
-        self.interest = Some(Interest {
-            event: interest,
-            mode,
-        });
         poller.modify_with_mode(&self.socket, interest, mode)
     }
 
     fn deregister(&mut self, poller: &Arc<Poller>) -> Result<()> {
-        if self.interest.take().is_some() {
-            poller.delete(&self.socket)
-        } else {
-            Ok(())
-        }
+        poller.delete(&self.socket)
     }
 
     fn handle_event(&mut self, _poller: &Arc<Poller>, _event: Event) -> Result<()> {
