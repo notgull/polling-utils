@@ -1,9 +1,12 @@
 //! A "ping" event source that uses IOCP to wake up the event loop.
 
-use crate::{Event, PollMode, Poller, Result, Source};
-use std::{sync::{Arc, Mutex, Weak, MutexGuard}, io};
+use crate::{Event, PollMode, Poller, Result};
+use std::{
+    io,
+    sync::{Arc, Mutex, MutexGuard, Weak},
+};
 
-use polling::os::iocp::{PollerIocpExt, CompletionPacket};
+use polling::os::iocp::{CompletionPacket, PollerIocpExt};
 
 macro_rules! lock {
     ($e:expr) => {{
@@ -26,12 +29,6 @@ struct Inner {
 
     /// The number of times we have been notified.
     notified: usize,
-
-    /// Are we currently in the IOCP thread?
-    in_port: bool,
-
-    /// Did we *just* receive this event?
-    edge_trigger: bool,
 }
 
 // TODO: CompletionPacket is thread safe
@@ -56,8 +53,6 @@ impl Ping {
         Ok(Self(Notify(Arc::new(Mutex::new(Inner {
             interest: None,
             notified: 0,
-            in_port: false,
-            edge_trigger: false,
         })))))
     }
 
@@ -80,6 +75,16 @@ impl Ping {
         interest: Event,
         mode: PollMode,
     ) -> Result<()> {
+        match mode {
+            PollMode::Oneshot | PollMode::Level => {}
+            _ => {
+                return Err(io::Error::new(
+                    io::ErrorKind::Other,
+                    "unsupported polling mode for IOCP",
+                ))
+            }
+        }
+
         // Set the interest.
         let mut inner = self.lock();
         inner.interest = Some(Interest {
@@ -88,20 +93,6 @@ impl Ping {
             mode,
         });
 
-        let is_edge = match mode {
-            PollMode::Oneshot | PollMode::Level => false,
-            PollMode::Edge | PollMode::EdgeOneshot => true, 
-            _ => return Err(io::Error::new(
-                io::ErrorKind::Other,
-                "unsupported polling mode for IOCP",
-            ))
-        };
-
-        // If we aren't currently in-port and we're ready to be notified, then notify the poller.
-        if !is_edge && (!inner.in_port && inner.notified > 0) {
-            inner.wake()?;
-        }
-
         Ok(())
     }
 
@@ -109,8 +100,6 @@ impl Ping {
         // Clear the interest.
         let mut inner = self.lock();
         inner.interest = None;
-        inner.in_port = false;
-        inner.edge_trigger = false;
 
         Ok(())
     }
@@ -119,8 +108,6 @@ impl Ping {
         // We are no longer in port.
         let mut inner = self.lock();
         inner.notified = inner.notified.saturating_sub(1);
-        inner.in_port = false;
-        inner.edge_trigger = false;
         Ok(())
     }
 
@@ -133,7 +120,6 @@ impl Notify {
     pub(super) fn notify(&self) -> Result<()> {
         let mut inner = lock!(self.0.lock());
         inner.notified = inner.notified.saturating_add(1);
-        inner.edge_trigger = true;
         inner.wake()
     }
 }
@@ -147,7 +133,11 @@ impl Inner {
             };
 
             poller.post(interest.packet.clone())?;
-            self.in_port = true;
+
+            // If we are in oneshot mode, remove future interest.
+            if matches!(interest.mode, PollMode::EdgeOneshot | PollMode::Oneshot) {
+                self.interest = None;
+            }
         }
 
         Ok(())
